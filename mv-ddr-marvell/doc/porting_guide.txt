@@ -1,0 +1,406 @@
+Armada-70x0/80x0/38x DDR Porting Guide
+=================
+
+This document provides with instructions for porting Marvell mv_ddr package to a customer board.
+
+Relevant Devices
+----------------
+	- Armada-80x0
+	- Armada-70x0
+	- Armada-38x
+
+Introduction
+------------
+This section describes a set of input parameters (a porting layer) for Marvell mv_ddr code.
+These input parameters include a DDR system topology, electrical, and timing parameters.
+The DDR code is responsible for taking these inputs, tuning timing and electrical parameters,
+and configuring a DDR memory controller and a PHY for reliable operation of a DDR system.
+
+Porting procedure
+-----------------
+1. Files location
+
+	- For A7/8K, refer to ``/path/to/atf/docs/marvell/porting.txt`` for the detailed description of ATF files location
+	- For A38x, update ``/path/to/mv_ddr/a38x/mv_ddr_a38x_brd.c`` file
+
+2. DDR topology map description
+
+	The definition of DDR topology structure is given at ``/path/to/mv_ddr/ddr_topology_def.h`` file::
+
+		struct mv_ddr_topology_map {
+			u8 if_act_mask; /* active interfaces bit mask */
+
+			/* per interface controller configuration */
+			struct if_params interface_params[MAX_INTERFACE_NUM];
+
+			u16 bus_act_mask; /* active buses bit mask */
+
+			enum mv_ddr_cfg_src cfg_src; /* ddr configuration data source */
+
+			union mv_ddr_spd_data spd_data; /* raw spd data */
+
+			unsigned int timing_data[MV_DDR_TDATA_LAST]; /* timing parameters */
+
+			struct mv_ddr_edata edata; /* electrical configuration */
+		};
+
+	The detailed explanation of mv_ddr_topology_map structure:
+
+	- if_act_mask - specifies active interfaces in a DDR system
+
+		- This parameter is defined as a bitwise mask for active interfaces
+		- Set to 0x1 for APN806 platform
+
+	- interface_params - contains a set of parameters to be configured per DDR interface
+
+		- This parameter is an array of if_params structures, one per interface
+		- The definition of if_params structure is given in ``/path/to/mv_ddr/ddr_topology_def.h`` file::
+
+			struct if_params {
+				struct bus_params as_bus_params[MAX_BUS_NUM]; /* bus configuration */
+
+				enum mv_ddr_speed_bin speed_bin_index; /* speed bin table */
+
+				enum mv_ddr_dev_width bus_width; /* sdram device width */
+
+				/* total sdram capacity per die, megabits */
+				enum mv_ddr_die_capacity memory_size;
+
+				enum mv_ddr_freq memory_freq; /* ddr interface frequency */
+
+				u8 cas_wl; /* delay cas write latency */
+
+				u8 cas_l; /* delay cas latency */
+
+				enum mv_ddr_temperature interface_temp; /* operation temperature */
+			};
+
+		The detailed explanation of if_params structure:
+
+		- as_bus_params - contains a set of parameters to be configured per DDR subphy
+
+			- DDR interface consists of a number of subphys
+			- MAX_BUS_NUM is currently set to 9 (see section 2.3 for bus_act_mask parameter)
+			- A DDR subphy consists of 8 data bits connected to data bits of a DDR module
+		  .. note::
+			- No need to configure these parameters, if MV_DDR_CFG_SPD is set as source configuration
+			- a70x0 soc cpu supports 64-bit DDR module memory bus width, while its memory controler is 32-bit
+			- a80x0 soc cpu supports 64-bit DDR module memory bus width, and its memory controler is 64-bit
+			- Configure the parameters for one of the buses and copy to the rest
+			- Specify a physical bus index for ECC subphy (not sequential one). For example, a70x0 ECC bus index will be 8 even if the chosen DDR module memory bus width is 32 bits
+
+		The definition of bus_params structure is given at ``/path/to/mv_ddr/ddr_topology_def.h`` file::
+
+				struct bus_params {
+					u8 cs_bitmask; /* chip select bitmask */
+
+					int mirror_enable_bitmask; /* mirroring bitmask */
+
+					int is_dqs_swap; /* dqs polarity swap */
+
+					int is_ck_swap; /* ck polarity swap */
+				};
+
+		The detailed explanation of bus_params structure:
+
+			- cs_bitmask - specifies a number of package ranks per DDR module
+
+				- This parameter is defined as a bitwise mask for active chip selects
+				- Set 0x1 for a single chip select in the system
+				- Set 0x3 for a dual chip select
+				.. note::
+					No need to configure these parameters, if MV_DDR_CFG_SPD is set as source configuration
+
+			- mirror_enable_bitmask - specifies whether rank 1 adress mapping 1 is mirrored
+
+				- This parameter is defined as a bitwise mask
+				- Set 0x0 for standard
+				- Set 0x1 for mirrored
+				.. note::
+					No need to configure these parameters, if MV_DDR_CFG_SPD is set as source configuration
+
+			- is_dqs_swap - specifies connectivity of DQS signal
+
+				- dqs signal is differential and can be swapped to ease its layout
+				- Set 0x0 for standard
+				- Set 0x1 for swapped
+
+			- is_ck_swap - specifies connectivity of CK signal
+
+				- ck signal is differential and can be swapped to ease its layout
+				- Set 0x0 for standard
+				- Set 0x1 for swapped
+
+		- speed_bin_index - specifies an index in speed bin table per chosen DDR module
+
+			The DDR code will configure the system per specified speed bin index, when MV_DDR_CFG_DEFAULT is set as source configuration (refer to section 2.4).
+
+			See sub-section 2.4.1 to properly choose such an index for a specific DDR module.
+			This parameter is of enum mv_ddr_speed_bin type.
+
+			A list of the supported speed bin index values:
+
+				- SPEED_BIN_DDR_1600J
+				- SPEED_BIN_DDR_1600K
+				- SPEED_BIN_DDR_1600L
+				- SPEED_BIN_DDR_1866L
+				- SPEED_BIN_DDR_1866M
+				- SPEED_BIN_DDR_1866N
+				- SPEED_BIN_DDR_2133N
+				- SPEED_BIN_DDR_2133P
+				- SPEED_BIN_DDR_2133R
+				- SPEED_BIN_DDR_2400P
+				- SPEED_BIN_DDR_2400R
+				- SPEED_BIN_DDR_2400T
+				- SPEED_BIN_DDR_2400U
+			.. note::
+				No need to configure these parameters, if MV_DDR_CFG_SPD is set as source configuration.
+
+		- bus_width - specifies a ddr device module data bus width
+		- memory_size - specifies total sdarm capacity per die in megabits
+		- memory_freq - specifies ddr interface frequency
+		- cas_wl - specifies CAS write latency
+		- cas_l - specifies CAS latency
+		- interface_temp - specifies interface operation temperature
+	- bus_act_mask - specifies active buses in an interface; defined as a bitwise mask for active busses
+	- cfg_src - specifies DDR configuration data source; the parameter is of enum mv_ddr_cfg_src type
+
+		- MV_DDR_CFG_DEFAULT - default configuration, mainly based on data provided in mv_ddr topology_map structure
+		- MV_DDR_CFG_SPD - configuration, which is based on data in a DDR module's SPD
+
+			.. note::
+				A DDR module's SPD is accessible via an I2C bus, while an I2C bus itself is accessible via application processor (AP) or "south bridge" (CP).
+				The DDR code requires appropriate configuration in the porting layer to access corresponding I2C bus.
+				This configuration is done in 2 functions in ``dram_port.c`` file:
+					- mpp_config(), where appropriate MPPs configured for I2C functionality
+					- update_dram_info(), where I2C initialization and read functions with appropriate parameters are called
+				Refer to the platform's ``dram_port.c`` file for a working example.
+		- MV_DDR_CFG_USER - a configuration, which is based on data from user
+		- MV_DDR_CFG_STATIC - as previous, but in register-value format
+	- spd_data - contains raw spd data read from a DDR module with spd
+	- timing_data - contains timing parameters
+	- edata - contains electrical configuration parameters
+
+		.. note::
+			The new electrical configuration infrastructure doesn't support A38x.
+
+		- The definition of mv_ddr_edata structure is given in ``/path/to/mv_ddr/ddr_topology_def.h`` file::
+
+			struct mv_ddr_edata {
+				struct mv_ddr_mem_edata mem_edata; /* memory electrical configuration */
+				struct mv_ddr_phy_edata phy_edata; /* phy electrical configuration */
+				struct mv_ddr_mac_edata mac_edata; /* mac electrical configuration */
+			};
+
+			struct mv_ddr_mem_edata {
+				enum mv_ddr_rtt_nom_park_evalue rtt_nom;
+				enum mv_ddr_rtt_nom_park_evalue rtt_park[MAX_CS_NUM];
+				enum mv_ddr_rtt_wr_evalue rtt_wr[MAX_CS_NUM];
+				enum mv_ddr_dic_evalue dic;
+			};
+
+			struct mv_ddr_phy_edata {
+				enum mv_ddr_ohm_evalue drv_data_p;
+				enum mv_ddr_ohm_evalue drv_data_n;
+				enum mv_ddr_ohm_evalue drv_ctrl_p;
+				enum mv_ddr_ohm_evalue drv_ctrl_n;
+				enum mv_ddr_ohm_evalue odt_p[MAX_CS_NUM];
+				enum mv_ddr_ohm_evalue odt_n[MAX_CS_NUM];
+			};
+
+			struct mv_ddr_mac_edata {
+				enum mv_ddr_odt_cfg_evalue odt_cfg_pat;
+				enum mv_ddr_odt_cfg_evalue odt_cfg_wr;
+				enum mv_ddr_odt_cfg_evalue odt_cfg_rd;
+			};
+
+		The detailed explanation of mv_ddr_edata structure:
+
+		- rtt_nomr, rtt_park - specify RTT_NOM and RTT_PARK values per the JEDEC standard
+
+			A list of the supported RTT_NOM and RTT_PARK values:
+
+				- MV_DDR_RTT_NOM_PARK_RZQ_DISABLE
+				- MV_DDR_RTT_NOM_PARK_RZQ_DIV4	/* 60-Ohm; RZQ = 240-Ohm */
+				- MV_DDR_RTT_NOM_PARK_RZQ_DIV2	/* 120-Ohm; RZQ = 240-Ohm */
+				- MV_DDR_RTT_NOM_PARK_RZQ_DIV6	/* 40-Ohm; RZQ = 240-Ohm */
+				- MV_DDR_RTT_NOM_PARK_RZQ_DIV1	/* 240-Ohm; RZQ = 240-Ohm */
+				- MV_DDR_RTT_NOM_PARK_RZQ_DIV5	/* 48-Ohm; RZQ = 240-Ohm */
+				- MV_DDR_RTT_NOM_PARK_RZQ_DIV3	/* 80-Ohm; RZQ = 240-Ohm */
+				- MV_DDR_RTT_NOM_PARK_RZQ_DIV7	/* 34-Ohm; RZQ = 240-Ohm */
+
+			.. note::
+				RTT_PARK, RTT_WR, ODT_P, and ODT_N parameters depend on a number of chip-selects in a
+				system. Therefore, their values should be provided in an array structure with indices
+				corresponding to this number. As an example, rtt_park[0] will include RTT_PARK value
+				for a system with one chip-select, rtt_park[1] - with two chip-selects, and so on.
+
+		- rtt_wr - specifies RTT_WR value per the JEDEC standard
+
+			A list of the supported RTT_WR values:
+
+				- MV_DDR_RTT_WR_DYN_ODT_OFF
+				- MV_DDR_RTT_WR_RZQ_DIV2	/* 120-Ohm; RZQ = 240-Ohm */
+				- MV_DDR_RTT_WR_RZQ_DIV1	/* 240-Ohm; RZQ = 240-Ohm */
+				- MV_DDR_RTT_WR_HIZ
+				- MV_DDR_RTT_WR_RZQ_DIV3	/* 80-Ohm; RZQ = 240-Ohm */
+
+		- dic - specifies Output Driver Impedance Control value per the JEDEC standard
+
+			A list of the supported DIC values:
+
+				- MV_DDR_DIC_RZQ_DIV7	/* 34-Ohm; RZQ = 240-Ohm */
+				- MV_DDR_DIC_RZQ_DIV5	/* 48-Ohm; RZQ = 240-Ohm */
+
+		- drv_data_p/n, drv_ctrl_p/n, odt_p/n - specify DATA, CONTROL, and ODT P/N drivers' strengths
+
+			A list of their supported values (see the note below) is as follows:
+
+				- MV_DDR_OHM_30
+				- MV_DDR_OHM_48
+				- MV_DDR_OHM_60
+				- MV_DDR_OHM_80
+				- MV_DDR_OHM_120
+				- MV_DDR_OHM_240
+
+			.. note::
+				This list contains the values shared between all the mentioned drivers' strengths.
+				Therefore, some drivers do not support all the values in the list. An attempt to
+				set an unsupported value to such a parameter results in an error message print.
+
+		- odt_cfg_pat/wr/rd - specify ODT pattern, write, and read configurations
+
+			A list of their supported values is as follows:
+
+				- MV_DDR_ODT_CFG_NORMAL
+				- MV_DDR_ODT_CFG_ALWAYS_ON
+
+3. Porting example::
+
+		static struct mv_ddr_topology_map board_topology_map = {
+			DEBUG_LEVEL_ERROR,
+			0x1, /* active interfaces */
+			/* cs_mask, mirror, dqs_swap, ck_swap X subphys */
+			{ { { {0x1, 0x0, 0, 0},
+			      {0x1, 0x0, 0, 0},
+			      {0x1, 0x0, 0, 0},
+			      {0x1, 0x0, 0, 0},
+			      {0x1, 0x0, 0, 0},
+			      {0x1, 0x0, 0, 0},
+			      {0x1, 0x0, 0, 0},
+			      {0x1, 0x0, 0, 0},
+			      {0x1, 0x0, 0, 0} },
+			   SPEED_BIN_DDR_2400T,		/* speed_bin */
+			   MV_DDR_DEV_WIDTH_8BIT,	/* sdram device width */
+			   MV_DDR_DIE_CAP_8GBIT,	/* die capacity */
+			   MV_DDR_FREQ_800,		/* frequency */
+			   0, 0,			/* cas_l, cas_wl */
+			   MV_DDR_TEMP_LOW} },		/* temperature */
+			MV_DDR_64BIT_ECC_PUP8_BUS_MASK, /* active busses */
+			MV_DDR_CFG_SPD,			/* ddr configuration data source */
+			{ {0} },			/* raw spd data */
+			{0},				/* timing parameters */
+			{					/* electrical configuration */
+				{				/* memory electrical configuration */
+					MV_DDR_RTT_NOM_PARK_RZQ_DISABLE,	/* rtt_nom */
+					{
+						MV_DDR_RTT_NOM_PARK_RZQ_DIV4,	/* rtt_park 1cs */
+						MV_DDR_RTT_NOM_PARK_RZQ_DIV1	/* rtt_park 2cs */
+					},
+					{
+						MV_DDR_RTT_WR_DYN_ODT_OFF,	/* rtt_wr 1cs */
+						MV_DDR_RTT_WR_RZQ_DIV2		/* rtt_wr 2cs */
+					},
+					MV_DDR_DIC_RZQ_DIV7	/* dic */
+				},
+				{				/* phy electrical configuration */
+					MV_DDR_OHM_30,	/* data_drv_p */
+					MV_DDR_OHM_30,	/* data_drv_n */
+					MV_DDR_OHM_30,	/* ctrl_drv_p */
+					MV_DDR_OHM_30,	/* ctrl_drv_n */
+					{
+						MV_DDR_OHM_60,	/* odt_p 1cs */
+						MV_DDR_OHM_120	/* odt_p 2cs */
+					},
+					{
+						MV_DDR_OHM_60,	/* odt_n 1cs */
+						MV_DDR_OHM_120	/* odt_n 2cs */
+					},
+				},
+				{				/* mac electrical configuration */
+					MV_DDR_ODT_CFG_NORMAL,	/* odt_cfg_pat */
+					MV_DDR_ODT_CFG_ALWAYS_ON,	/* odt_cfg_wr */
+					MV_DDR_ODT_CFG_NORMAL,	/* odt_cfg_rd */
+				},
+			},
+		};
+
+4. Logging options
+
+	mv_ddr_debug_level - this parameter defines the ddr debug level options:
+
+		- LOG_LEVEL_ERROR - prints only error messages during the ddr training this is default configuration
+		- LOG_LEVEL_TRACE - prints training algorithm data and errors
+		- LOG_LEVEL_INFO - prints training detailed information trace and errors
+
+5. Compiler options
+
+6. Static configuration options
+
+	The current static PHY and MC configuration options are available for APN806, A80x0 project with single chip select.
+
+	This functionality is controlled statically through mv_ddr Makefile:
+
+		- "CFLAGS += -DCONFIG_MC_STATIC" line enables MC static configuration
+		- "CFLAGS += -DCONFIG_MC_STATIC_PRINT" line prints out MC configuration
+		- "CFLAGS += -DCONFIG_PHY_STATIC" line enables PHY static configuration
+		- "CFLAGS += -DCONFIG_PHY_STATIC_PRINT" line prints PHY configuration
+	All these options may be enabled either separately or together.
+
+	The CONFIG_*_STATIC_PRINT option(s) prints out appropriate C-code of MC and/or PHY
+	static configuration to be inserted "as is" into corresponding ``mv_ddr_static.c``
+	file to enable further functionality of CONFIG_*_STATIC option(s).
+
+	Customization of these static configurations is as follows:
+
+		- Update the following arrays of the lists of registers:
+
+			- MC:
+
+				- dunit_regs_list
+				- mc6_regs_list
+			- PHY:
+
+				- data_phy_regs_list
+				- ctrl_phy_regs_list
+				- dunit_4phy_regs_list
+				- mc6_4phy_regs_list
+		- Update the sizes of the mentioned arrays using their corresponding defines:
+
+			- MC:
+
+				- DUNIT_REGS_NUM
+				- MC6_REGS_NUM
+			- PHY:
+
+				- DATA_PHY_REGS_NUM
+				- CTRL_PHY_REGS_NUM
+				- DUNIT_4PHY_REGS_NUM
+				- MC6_4PHY_REGS_NUM
+
+	- Use the "print" option(s) to generate an appropriate static configuration
+
+7. DRAM Remapping
+
+	ARMADA 7/8K DRAM memory controller has DRAM translation unit with the remapping capability.
+	It is used to remap the DRAM region overlapping with the I/O configuration space providing
+	with an access to the entire DRAM memory.
+
+	To remap ARMADA 7/8K DRAM overlapping region, one should specify the start and end physical
+	addresses of the contiguous non-DRAM memory region (the overlapping I/O configuration space).
+	It is done using the following preprocessor macros in
+
+		path/to/mv_ddr/apn806/mv_ddr_plat.h file:
+
+			#define NON_DRAM_MEM_RGN_START_ADDR	0xc0000000ULL
+			#define NON_DRAM_MEM_RGN_END_ADDR	0x100000000ULL

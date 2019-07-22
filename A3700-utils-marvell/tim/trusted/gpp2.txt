@@ -1,0 +1,61 @@
+; Check the status of counter #3, if the counter is inactive,
+; reenable the counter.
+TEST_ADDR_AND_BRANCH: 0xC0008330 0x00000002 0x00000002 == CNT3
+AND_VAL: 0xC0008330 0xFFFFFFFE
+OR_VAL: 0xC0008330 0x00000001
+LABEL: CNT3
+
+; Clean the mailbox
+TEST_ADDR_AND_BRANCH: 0xC001404C 0x00000001 0x00000001 == MB1
+WRITE: 0x64000400 0x00000000
+LABEL: MB1
+
+; Set cpu dram window size
+; When cs1 is not selected, cpu dram window size is just dram cs0's size,
+; and window base address is 0 as cs0 memory always starts from 0;
+; when dram cs1 is selected, the cpu dram window is the combination of cs0 and cs1,
+; the window base address is still 0 while the window size is the sum of cs0's size and cs1's size,
+; and since cs0 and cs1 are in succession, then cs1's start address is just cs0's size,
+; so in this case the cpu dram window size is the sum of cs1's start addess and cs1's size.
+
+TEST_ADDR_AND_BRANCH: 0xC0000208 0x00000001 0x00000001 == CS1
+LOAD_SM_ADDR: SM0 0xC0000200	; load reg of Channel 0 MMAP CS Low to SM0
+LOAD_SM_VAL: SM1 0x00000000	; the 64KB number of cs0 memory starting address is always 0
+BRANCH: CONF
+
+LABEL: CS1
+LOAD_SM_ADDR: SM0 0xC0000208	; load reg of Channel 1 MMAP CS Low to SM0
+MOV_SM_SM: SM1 SM0		; SM1 = SM0
+AND_SM_VAL: SM1 0xFF800000	; MEM_START_ADDR_L_SHIFT = 23, get Starting cs1 memory starting address
+RSHIFT_SM_VAL: SM1 0x00000010	; count the 64KB number of cs1 memory starting address
+
+LABEL: CONF
+RSHIFT_SM_VAL: SM0 0x00000010	; AREA_LEN_SHIFT = 16
+AND_SM_VAL: SM0 0x0000001F	; &= AREA_LEN_SHIFT
+; count current cs dram size value in window size format,
+; the number of 1s specifies the size of the window in 64 KB granularity,
+; dram size value = (1 << AREA_LEN) - 1;
+LOAD_SM_VAL: SM2 0x00000001
+LABEL: CON
+TEST_SM_AND_BRANCH: SM0 0x0000001F 0x00000000 == OUT
+LSHIFT_SM_VAL: SM2 0x00000001
+SUB_SM_VAL: SM0 0x00000001
+BRANCH: CON
+LABEL: OUT
+SUB_SM_VAL: SM2 0x00000001
+; finish current cs dram size value counting;
+ADD_SM_SM: SM2 SM1		; count total dram size value in window size format
+; Because Armada 37x0's 4G address space includes an "internal register" window,
+; its cpu dram window size is up to 2 GB;
+; So when total dram size is more than 2GB, only 2GB is configured in the first cpu dram window,
+; the remain dram sizes are configured in other cpu dram windows in atf later;
+; Window size value's valid bits are bits[23:0];
+; When total dram size is 2GB, the value in window size format will be 0x7FFFF;
+; when total dram size is more than 2GB, some continuous left bits of 0x7FFFF will be set,
+; the left bits mask is 0xFF8000.
+TEST_SM_AND_BRANCH: SM2 0x00FF8000 0x00000000 == DRAM
+LOAD_SM_VAL: SM2 0x00007FFF
+LABEL: DRAM
+AND_VAL: 0xC000CF00 0xFFFFFFFE	; disable cpu dram window
+STORE_SM_ADDR: SM2 0xC000CF04	; write cpu dram window size
+OR_VAL: 0xC000CF00 0x00000001	; enable cpu dram window

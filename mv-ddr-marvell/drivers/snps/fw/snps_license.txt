@@ -1,0 +1,27 @@
+Marvell License for Synopsys Firmware
+
+Marvell hereby grants a limited, nonexclusive, non-transferable license to
+distribute the Synopsys Firmware incorporated in the boot code of Marvell’s
+ICs, subject to the following terms and conditions:
+
+1) The Synopsys Firmware shall be delivered in binary format only, solely for
+use with the Marvell ICs.
+
+2) The Synopsys Firmware are the proprietary information of Synopsys and the
+copyright, trademark, and other notices that appear on the Synopsys Firmware,
+shall be reproduced  on all copies of the Synopsys Firmware.
+
+3) THE SYNOPSYS FIRMWARE IS PROVIDED “AS IS” AND WITHOUT ANY WARRANTY.
+SYNOPSYS EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES, EXPRESS, IMPLIED OR
+OTHERWISE, INCLUDING THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE, AND NON-INFRINGEMENT, AND ANY WARRANTIES ARISING OUT OF A
+COURSE OF DEALING OR USAGE OF TRADE.
+
+IN NO EVENT SHALL SYNOPSYS BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL,
+INCIDENTAL, SPECULATIVE OR CONSEQUENTIAL DAMAGES OF ANY KIND RELATING TO THE
+SYNOPSYS FIRMWARE INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, LOSS OF USE,
+LOSS OF GOODWILL, OR INTERRUPTION OF BUSINESS, EVEN IF MARVELL OR RECIPIENTS
+IS ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+Any software which integrates this code or any part of it thereof, should
+include in its header the above license.

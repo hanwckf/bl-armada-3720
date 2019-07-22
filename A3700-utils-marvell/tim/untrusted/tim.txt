@@ -1,0 +1,8 @@
+Image ID:                       0x54494D48		; TIMH
+Next Image ID:                  0x57544d49		; WTMI next
+Flash Entry Address:            0x00000000		; TIM flash addr
+Load Address:                   0x20006000		; TIM ISRAM addr
+Image Size To CRC in bytes:     0xFFFFFFFF
+Hash Algorithm ID:              32			; SHA-256
+Partition Number:               0x00000000
+Image Filename: TIM_ATF.bin

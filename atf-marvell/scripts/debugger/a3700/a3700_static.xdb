@@ -1,0 +1,70 @@
+! -----------------------------------------------------------------------
+!  MARVELL INTERNATIONAL LTD., ON BEHALF OF ITSELF AND ITS WORLDWIDE
+! AFFILIATES(COLLECTIVELY, "MARVELL"), MAKES NO WARRANTY OF ANY KIND WITH
+! REGARD TO THIS MATERIAL, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+! OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+! MARVELL ASSUMES NO RESPONSIBILITY FOR ANY ERRORS THAT MAY
+! APPEAR IN THIS DOCUMENT. MARVELL MAKES NO COMMITMENT TO
+! UPDATE NOR TO KEEP CURRENT THE INFORMATION CONTAINED IN THIS DOCUMENT.
+! -----------------------------------------------------------------------
+! creation date: Mon June 26 10:00:00 2016
+
+
+! Run DDR initialization, need to set full path in Windows
+set val /size=byte @DDR_INIT_SCRIPT_PATH="EMPTY"
+! set val /size=byte @DDR_INIT_SCRIPT_PATH="a3700_ddr3_cpu_600_ddr_600.xdb"
+! set val /size=byte @DDR_INIT_SCRIPT_PATH="a3700_ddr4_cpu_1000_ddr_800.xdb"
+if (@strcmp(@DDR_INIT_SCRIPT_PATH,"EMPTY")==0) then
+	set value @DDR_INIT_SCRIPT_PATH = @queryinputfile("select DDR init file", "all files (*.*)|*.*");
+end
+BATCH @DDR_INIT_SCRIPT_PATH
+
+! Set the first dram cpu decoder window size;
+BATCH "a3700_cpu_decwin.xdb"
+
+! Load FIP, Need update full image path if do not want to select FIP by GUI window
+set val /size=byte @ATF_FIP_BIN_PATH="EMPTY"
+! set val /size=byte @ATF_FIP_BIN_PATH="fip.bin"
+if (@strcmp(@ATF_FIP_BIN_PATH,"EMPTY")==0) then
+	set value @ATF_FIP_BIN_PATH = @queryinputfile("select FIP bin file", "all files (*.*)|*.*");
+end
+! load fip.bin (loaded by BL1 from 0x4120000)
+LOAD /BINARY /ADDRESS=0x4120000 OF @ATF_FIP_BIN_PATH
+
+
+! Load BL1, Need update full image path if do not want to select BL1 by GUI window
+set val /size=byte @ATF_BL1_BIN_PATH="EMPTY"
+! set val /size=byte @ATF_BL1_BIN_PATH="bl1.bin"
+if (@strcmp(@ATF_BL1_BIN_PATH,"EMPTY")==0) then
+	set value @ATF_BL1_BIN_PATH = @queryinputfile("select BL1 bin file", "all files (*.*)|*.*");
+end
+! load BL1.bin (run from 0x4100000)
+LOAD /BINARY /ADDRESS=0x4100000 OF @ATF_BL1_BIN_PATH
+
+
+! load single boot image including BL1 and FIP (run from 0x4100000), open it when need
+! set val /size=byte @ATF_BOOT_IMG_PATH="EMPTY"
+! set val /size=byte @ATF_BOOT_IMG_PATH="boot-image.bin"
+! if (@strcmp(@ATF_BOOT_IMG_PATH,"EMPTY")==0) then
+!	set value @ATF_BOOT_IMG_PATH = @queryinputfile("select boot image file", "all files (*.*)|*.*");
+! end
+! LOAD /BINARY /ADDRESS=0x04100000 OF @ATF_BOOT_IMG_PATH
+
+
+! Load symbols examples, set correct path and enable them when need
+! Load u-boot symbols
+! LOAD /SEGMENT /DEBUG /GLOBAL /NOLOAD OF "u-boot"
+! Load ATF BL31 symbols
+! LOAD /SEGMENT /DEBUG /GLOBAL /NOLOAD OF "bl31.elf"
+
+
+! Break point examples, set and enable them when need
+! Break at BL1 start
+! SET BREAKPOINT AT CORE:1(0x04100000)
+! Break at BL1 entry point
+! SET BREAKPOINT AT CORE:1(&a3700_pwr_domain_on) HARD 1
+
+
+! Start from BL1
+SET REGISTER PC=0x4100000
+RUN

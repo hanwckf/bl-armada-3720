@@ -1,0 +1,7 @@
+#
+# SPDX-License-Identifier:           GPL-2.0
+# https://spdx.org/licenses
+# Copyright (C) 2018 Marvell International Ltd.
+#
+# commit id of base tag for this branch
+7f6d8f49aa916a526c2ce227606cc51eebd0c950 Merge pull request #1358 from omasab/sgi575_mt_flag

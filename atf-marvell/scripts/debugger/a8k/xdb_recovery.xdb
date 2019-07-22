@@ -1,0 +1,26 @@
+! The scripts assume that the scripts is located under the ATF scripts directory
+! Need to update the path of the images (With full path)
+set val /size=byte @BI_BIN_PATH="EMPTY"
+set val /size=byte @BIN_EXT_ELF_PATH="EMPTY"
+
+! Set the flash is empty the breakpoints will be changed accordingly.
+set val @flash_empty = 0
+
+! if the flash empty - run the BLE script to load BLE code, ATF code, and U-Boot code.
+define macro /OVERWRITE /button restore_empty_flash "set val @flash_empty = 1; @restore_boot;"
+! restore u-boot with one button
+define macro /OVERWRITE /button restore_flash "@restore_boot;"
+
+define macro restore_boot "batch \"scripts/debugger/a8k/restore_boot.xdb\"\n"
+define macro /OVERWRITE /button help_message "\
+MESSAGE \"			HELP MESSAGE\\n\
+This help is relevant for Armada-7k/8k SoC debug and recovery\\n\
+To recovery the board from scratch (empty flash), run empty_flash flash button.\\n\
+- The restore_empty_flash button will run the BootRom until it stuck in boot from UART mode.\\n\
+  then load binary extension, and boot image and run them.\\n\\n\
+To load new image to board.\\n\
+- The restore_flash button will load binary extension, and boot image and run them.\\n\\n\
+\""
+
+! Stop the CPU before run any button
+STOP

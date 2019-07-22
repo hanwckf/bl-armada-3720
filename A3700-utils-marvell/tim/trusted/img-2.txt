@@ -1,0 +1,11 @@
+Image ID:                       0x4F424d49		; OBMI
+Next Image ID:                  0xFFFFFFFF		; NONE
+Flash Entry Address:            0x00019000		; OBMI flash addr
+Load Address:                   0x64100000		; OBMI RAM addr
+Image Size To Hash in bytes:     0xFFFFFFFF
+Hash Algorithm ID:              32			; SHA-256
+Partition Number:               0x00000000
+Encrypt Algorithm ID:           0x00000000
+Encrypt Start Offset:           0x00000000
+Encrypt Size:                   0x00000000
+Image Filename: BOOT_IMAGE

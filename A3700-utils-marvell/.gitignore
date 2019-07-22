@@ -1,0 +1,12 @@
+#ignore target directory
+wtmi/build/*
+#ignore all intermediate files
+*.[oad]
+*.elf
+*.dis
+*.bin
+#ignore specific files
+ddr_static.txt
+autoconf.h
+tim/ddr/ddr_tool
+

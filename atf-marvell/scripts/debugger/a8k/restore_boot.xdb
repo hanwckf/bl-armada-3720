@@ -1,0 +1,65 @@
+if (@strcmp(@BIN_EXT_ELF_PATH,"EMPTY")==0) then
+	SET VALUE @BIN_EXT_ELF_PATH = @queryinputfile("Select BLE elf file", "All Files (*.*)|*.*|ELF Files (*.afx;*.elf)|*.afx;*.elf||");
+	IF @strlen(@BIN_EXT_ELF_PATH) == 0 then
+		!User hit cancel button
+		print "USER ABORT\n"
+		MESSAGE "Update the path of the binary extension, and reload the script"
+		EXIT
+	END
+end
+
+if (@strcmp(@BI_BIN_PATH,"EMPTY")==0) then
+	set value @BI_BIN_PATH  = @queryinputfile("select Boot-image binary file", "all files (*.*)|*.*");
+	if @strlen(BI_BIN_PATH) == 0 then
+		!user hit cancel button
+		print "user abort\n"
+		MESSAGE "Update the path of the Boot-image binary, and reload the script"
+		EXIT
+	end
+end
+
+! Reset the board
+TCI TRESET
+RESTART
+
+IF @flash_empty != 1 THEN
+	! break at start of bin_ext_run
+	SET BREAKPOINT AT (0xFFE1C048) HARD
+ELSE
+	! break at UART error of Bootrom
+	SET BREAKPOINT AT (0xFFFF0D14) HARD
+	RUN
+	SET BREAKPOINT AT (0xffff242c) HARD
+END
+
+! Run till the breakpoint
+RUN
+DELETE BREAKPOINT /ALL
+
+IF @flash_empty != 1 THEN
+! load BLE elf file (run from 0xFFE1C048)
+LOAD /SEGMENT /DEBUG /GLOBAL OF @BIN_EXT_ELF_PATH
+ELSE
+! load BLE elf file and update the PC to the start of the BLE
+LOAD /SEGMENT /DEBUG /GLOBAL /INIT="" OF @BIN_EXT_ELF_PATH
+END
+
+! Break at the end of DRAM init before jumping back top BootROM
+SET BREAKPOINT AT (0xFFE1C060) HARD
+RUN
+DELETE BREAKPOINT /ALL
+
+! DRAM should be ready now.
+! Jump to BootRom to disable MMU and clean caches
+SET REGISTER X1=0x0
+SET REGISTER PC=0xffff0668
+
+! Before run the BootRom, set breakpoint before jump to image execution
+SET BREAKPOINT AT (0xffff068c) HARD
+RUN
+DELETE BREAKPOINT /ALL
+
+! Load boot-image.bin and run
+SET REGISTER PC=0x4100000
+LOAD /BINARY /ADDRESS=0x4100000 OF @BI_BIN_PATH
+RUN

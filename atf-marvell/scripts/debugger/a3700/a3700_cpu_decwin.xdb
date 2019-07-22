@@ -1,0 +1,17 @@
+! -----------------------------------------------------------------------
+!  MARVELL INTERNATIONAL LTD., ON BEHALF OF ITSELF AND ITS WORLDWIDE
+! AFFILIATES(COLLECTIVELY, "MARVELL"), MAKES NO WARRANTY OF ANY KIND WITH
+! REGARD TO THIS MATERIAL, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+! OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+! MARVELL ASSUMES NO RESPONSIBILITY FOR ANY ERRORS THAT MAY
+! APPEAR IN THIS DOCUMENT. MARVELL MAKES NO COMMITMENT TO
+! UPDATE NOR TO KEEP CURRENT THE INFORMATION CONTAINED IN THIS DOCUMENT.
+! -----------------------------------------------------------------------
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++
+! Set the first dram cpu decoder window size
+!+++++++++++++++++++++++++++++++++++++++++++++++++
+SET VALUE /SIZE=LONG CORE:3(0xC000CF00)=0x00000000
+! the window size should be set to 2GB with value of 0x00007FFF if the total dram size is over 2GB.
+SET VALUE /SIZE=LONG CORE:3(0xC000CF04)=0x00001FFF
+SET VALUE /SIZE=LONG CORE:3(0xC000CF00)=0x00000001

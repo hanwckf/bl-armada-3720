@@ -1,0 +1,124 @@
+Armada-37x0 DDR Porting Guide
+=============================
+This document provides instructions for porting the DDR initialization code in
+TIM header to a customer board.
+
+1. Relevant Devices
+-------------------
+- Armada-37x0
+
+2. Introduction
+---------------
+Armada37x0 performs the DDR intialization with the following two stages::
+
+	TIM stage : static DDR PHY and controller initialization according to the actual DDR
+	            topology, which guarantees DDR stable at a relevant low frequency
+	            (DDR3 - 300MHz, DDR4 - 400MHz).
+	WTMI stage: raise the DDR clock to a higher speed specified in build command, and
+	            performs dynamic DDR PHY training
+
+The major effort of DDR porting is about dealing with the different DDR topologies.
+Thus, this document will focus on the changes of DDR code in TIM stage only.
+
+3. A3700 DDR Porting tool usage
+-------------------------------
+This tool is located at /path_to_A3700_utils/tim/ddr/
+::
+
+	ddr_tool -i CFG_FILE -o OUTPUT_FILE [OPTION]
+	Read configuration from CFG_FILE and generate ddr reg list to OUTPUT_FILE
+		-r      replace the reg value in list
+		-h      display this help
+
+	For example:
+		./ddr_tool -i DDR_TOPOLOGY_CUST.txt -o tim_ddr_cust.txt -r 0xC0000380=0x0007A120
+
+4. Configuration file input
+---------------------------
+The configuration file is a txt file with items like "name=value", those lines starts with "#"
+will be skipped by the programe as comments.
+Customers can use the "DDR_TOPOLOGY_CUST.txt" as an example and update the settings accordingly.
+The configuration file is like below::
+
+	#DDR3
+	ddr_type=0
+
+	#1CS
+	ddr_cs_mask=1
+
+	#DDR3_1600K
+	ddr_speedbin_index=12
+
+	#16BIT
+	ddr_bus_width_index=2
+
+	#4Gbits (512MB)
+	ddr_mem_size_index=3
+
+	#800M-1600K(optional)
+	ddr_cas_latency=11
+	ddr_cas_write_latency=8
+
+5. configuration items
+----------------------
+::
+
+	name:   ddr_type
+	value:  0-DDR3, 1-DDR4
+
+	name:   ddr_cs_mask
+	value:  1-1CS, 3-2CS
+
+	name:   ddr_bus_width_index
+	value:  0-4bits, 1-8bits, 2-16bits
+	tips:   this is the data width of the single DDR chip
+
+	name:   ddr_mem_size_index
+	value:  0-512Mb, 1-1GBb, 2-2Gb,
+		3-4Gb, 4-8Gb, 5-16Gb, 6-32Gb
+	tips:   this is the memory size (in bits) of the single DDR chip
+
+	name:   ddr_cas_latency/ddr_cas_write_latency
+	value:  latency for the specific ddr clock and speedbin
+	tips:   optional, use default value if not set
+	        default value: DDR3-800Mhz-1600K(CL=11, CWL=8)
+	                       DDR4-800Mhz-2400R(CL=12, CWL=11)
+
+	name:   ddr_speedbin_index
+	value:
+	        - 0-DDR4_1600J,
+	        - 1-DDR4_1600K,
+	        - 2-DDR4_1600L,
+	        - 3-DDR4_1866L,
+	        - 4-DDR4_1866M,
+	        - 5-DDR4_1866N,
+	        - 6-DDR4_2133N,
+	        - 7-DDR4_2133P,
+	        - 8-DDR4_2133R,
+	        - 9-DDR4_2400P,
+	        - 10-DDR4_2400R,
+	        - 11-DDR4_2400T,
+	        - 12-DDR4_2400U,
+
+	        - 0-DDR3_800D,
+	        - 1-DDR3_800E,
+	        - 2-DDR3_1066E,
+	        - 3-DDR3_1066F,
+	        - 4-DDR3_1066G,
+	        - 5-DDR3_1333F,
+	        - 6-DDR3_1333G,
+	        - 7-DDR3_1333H,
+	        - 8-DDR3_1333J,
+	        - 8-DDR3_1600G,
+	        - 10-DDR3_1600H,
+	        - 11-DDR3_1600J,
+	        - 12-DDR3_1600K,
+	        - 13-DDR3_1866J,
+	        - 14-DDR3_1866K,
+	        - 15-DDR3_1866L,
+	        - 16-DDR3_1866M,
+	        - 17-DDR3_2133K,
+	        - 18-DDR3_2133L,
+	        - 19-DDR3_2133M,
+	        - 20-DDR3_2133N,
+
