@@ -9,4 +9,6 @@ wtmi/build/*
 ddr_static.txt
 autoconf.h
 tim/ddr/ddr_tool
-
+tim/ddr/clocks_ddr.txt
+wtmi/fuse/fuse.ld
+wtmi/sys_init/sys_init.ld
