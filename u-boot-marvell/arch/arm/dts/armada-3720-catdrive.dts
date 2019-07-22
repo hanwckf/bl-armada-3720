@@ -1,0 +1,114 @@
+// SPDX-License-Identifier: GPL-2.0+
+/dts-v1/;
+
+#include "armada-372x.dtsi"
+
+/ {
+	model = "Marvell Armada 3720 Catdrive";
+	compatible = "marvell,armada-3720-catdrive",
+		     "marvell,armada3720", "marvell,armada3710";
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	aliases {
+		ethernet0 = &eth0;
+		spi0 = &spi0;
+	};
+
+	memory {
+		device_type = "memory";
+		reg = <0x00000000 0x00000000 0x00000000 0x20000000>;
+	};
+
+	soc {
+		internal-regs {
+			mdio@32004 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x32004 0x04>;
+				ethphy0: ethernet-phy@0 {
+					reg = <0>;
+				};
+			};
+		};
+	};
+};
+
+&eth0 {
+	status = "okay";
+	phy-mode = "sgmii";
+	phy = <&ethphy0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&ptp_pins &smi_pins>;
+};
+
+&pinctrl_sb {
+	ptp_pins: ptp-pins {
+		groups = "ptp";
+		function = "gpio";
+	};
+};
+
+&comphy {
+	phy0 {
+		phy-type = <COMPHY_TYPE_UNCONNECTED>;
+		phy-speed = <COMPHY_SPEED_INVALID>;
+	};
+
+	phy1 {
+		phy-type = <COMPHY_TYPE_SGMII0>;
+		phy-speed = <COMPHY_SPEED_1_25G>;
+	};
+
+	phy2 {
+		phy-type = <COMPHY_TYPE_SATA0>;
+		phy-speed = <COMPHY_SPEED_6G>;
+		phy-invert = <COMPHY_POLARITY_TXD_INVERT>;
+	};
+};
+
+&sata {
+	status = "okay";
+};
+
+&sdhci1 {
+	non-removable;
+	bus-width = <8>;
+	mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
+	marvell,pad-type = "fixed-1-8v";
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc_pins>;
+	status = "okay";
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+	mmccard: mmccard@0 {
+		compatible = "mmc-card";
+		reg = <0>;
+	};
+};
+
+&spi0 {
+	status = "okay";
+
+	spi-flash@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "spi-flash";
+		reg = <0>;
+		spi-max-frequency = <104000000>;
+	};
+};
+
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1_pins>;
+	status = "okay";
+};
+
+&usb2 {
+	status = "okay";
+};

@@ -12,6 +12,7 @@
 #include <asm/arch/cpu.h>
 #include <asm/arch/soc.h>
 #include <power/regulator.h>
+#include <asm-generic/gpio.h>
 #ifdef CONFIG_BOARD_CONFIG_EEPROM
 #include <mvebu/cfg_eeprom.h>
 #endif
@@ -124,6 +125,53 @@ static int board_comphy_usb3_sata_mux(enum COMPHY_LANE2_MUXING comphy_mux)
 	return 0;
 }
 
+#define PHY_RESET	"GPIO221"
+static int phy_hw_reset(void)
+{
+	unsigned int gpio;
+	int ret;
+
+	if (!of_machine_is_compatible("marvell,armada-3720-catdrive"))
+		return 0;
+
+	ret = gpio_lookup_name(PHY_RESET, NULL, NULL, &gpio);
+	if (ret) {
+		printf("GPIO: '%s' not found\n", PHY_RESET);
+	} else {
+		gpio_free(gpio);
+		gpio_request(gpio, "phy_reset");
+		gpio_direction_output(gpio, 1);
+		mdelay(20);
+		gpio_set_value(gpio, 0);
+		mdelay(50);
+		gpio_set_value(gpio, 1);
+	}
+
+	return 0;
+}
+
+#define SATA_PWR	"GPIO20"
+static int enable_sata_power(void)
+{
+	unsigned int gpio;
+	int ret;
+	if (!of_machine_is_compatible("marvell,armada-3720-catdrive"))
+		return 0;
+
+	ret = gpio_lookup_name(SATA_PWR, NULL, NULL, &gpio);
+	if (ret) {
+		printf("GPIO: '%s' not found\n", SATA_PWR);
+	} else {
+		gpio_free(gpio);
+		gpio_request(gpio, "sata_pwr");
+		gpio_direction_output(gpio, 1);
+		mdelay(20);
+		gpio_set_value(gpio, 1);
+	}
+
+	return 0;
+}
+
 int board_early_init_f(void)
 {
 #ifdef CONFIG_BOARD_CONFIG_EEPROM
@@ -149,6 +197,8 @@ int board_ahci_enable(void)
 	struct udevice *dev;
 	int ret;
 	u8 buf[8];
+
+	enable_sata_power();
 
 	/* Only DB requres this configuration */
 	if (!of_machine_is_compatible("marvell,armada-3720-db"))
@@ -281,6 +331,8 @@ static int mii_multi_chip_mode_write(struct mii_dev *bus, int dev_smi_addr,
 /* Bring-up board-specific network stuff */
 int board_network_enable(struct mii_dev *bus)
 {
+	phy_hw_reset();
+
 	if (!of_machine_is_compatible("marvell,armada-3720-espressobin"))
 		return 0;
 

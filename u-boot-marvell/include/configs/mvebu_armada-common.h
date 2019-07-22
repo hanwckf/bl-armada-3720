@@ -34,19 +34,18 @@
 #define CONFIG_ETHPRIME			"eth0"
 #define CONFIG_ROOTPATH                 "/srv/nfs/" /* Default Dir for NFS */
 #define CONFIG_ENV_OVERWRITE		/* ethaddr can be reprogrammed */
-#define CONFIG_EXTRA_ENV_SETTINGS	"bootcmd=run get_images; " \
-						"run set_bootargs; " \
-						"booti $kernel_addr_r " \
-						"$ramdisk_addr_r " \
-						"$fdt_addr_r\0" \
-					"extra_params=pci=pcie_bus_safe\0" \
-					"kernel_addr_r=0x7000000\0"	\
-					"initrd_addr=0xa00000\0"	\
+#define CONFIG_EXTRA_ENV_SETTINGS	"bootcmd=for target in ${boot_targets}; " \
+						"do run bootcmd_${target}; " \
+						"done\0" \
+					"kernel_addr=0x7000000\0"	\
+					"initrd_addr=0x1100000\0"	\
 					"initrd_size=0x2000000\0"	\
-					"fdt_addr_r=0x6f00000\0"	\
-					"loadaddr=0x6000000\0"		\
+					"fdt_addr=0x6000000\0"	\
+					"loadaddr=0x8000000\0"		\
 					"fdt_high=0xffffffffffffffff\0"	\
+					"scriptaddr=0x6d00000\0"	\
 					"hostname=marvell\0"		\
+					"initrd_image=uInitrd\0"	\
 					"ramdisk_addr_r=0x8000000\0"	\
 					"ramfs_name=-\0"		\
 					"fdt_name=fdt.dtb\0"		\
@@ -56,25 +55,28 @@
 					"eth2addr=00:51:82:11:22:02\0"	\
 					"eth3addr=00:51:82:11:22:03\0"	\
 					"image_name=Image\0"		\
-					"get_ramfs=if test \"${ramfs_name}\"" \
-						" != \"-\"; then setenv " \
-						"ramdisk_addr_r 0x8000000; " \
-						"tftpboot $ramdisk_addr_r " \
-						"$ramfs_name; else setenv " \
-						"ramdisk_addr_r -;fi\0"	\
-					"get_images=tftpboot $kernel_addr_r " \
-						"$image_name; tftpboot " \
-						"$fdt_addr_r $fdt_name; " \
-						"run get_ramfs\0"	\
 					"console=" CONFIG_DEFAULT_CONSOLE "\0"\
-					"root=root=/dev/nfs rw\0"	\
-					"set_bootargs=setenv bootargs $console"\
-						" $root ip=$ipaddr:$serverip:" \
-						"$gatewayip:$netmask:$hostname"\
-						":$netdev:none nfsroot="\
-						"$serverip:$rootpath,tcp,v3 " \
-						"$extra_params " \
-						"$cpuidle"
+					"boot_targets=usb mmc0 sata\0"	\
+					"boot_prefixes=/ /boot/\0"	\
+					"bootcmd_mmc0=setenv devnum 0; " \
+						"setenv boot_interface mmc; " \
+						"run scan_dev_for_boot;\0"	\
+					"bootcmd_sata=setenv devnum 0; "	\
+						"scsi scan; "	\
+						"scsi dev 0; "	\
+						"setenv boot_interface scsi; "	\
+						"run scan_dev_for_boot;\0"	\
+					"bootcmd_usb=setenv devnum 0; " \
+						"usb start; " \
+						"setenv boot_interface usb; "	\
+						"run scan_dev_for_boot;\0"	\
+					"scan_dev_for_boot=for prefix in ${boot_prefixes}; "\
+						"do echo ${prefix}; "	\
+						"run boot_a_script; "	\
+						"done\0"	\
+					"boot_a_script=ext4load ${boot_interface} "	\
+						"${devnum}:1 ${scriptaddr} ${prefix}boot.scr; "	\
+						"source ${scriptaddr};\0"
 /*
  * For booting Linux, the board info and command line data
  * have to be in the first 8 MB of memory, since this is
@@ -139,7 +141,7 @@ defined(CONFIG_TARGET_MVEBU_ARMADA_37XX) && defined(CONFIG_MV88E6XXX_SWITCH)
  */
 #define CONFIG_ENV_OFFSET		(0x200000 - CONFIG_ENV_SIZE)
 #else
-#define CONFIG_ENV_OFFSET		(0x400000 - CONFIG_ENV_SIZE)
+#define CONFIG_ENV_OFFSET		(0x200000 - CONFIG_ENV_SIZE)
 #endif
 #endif
 
