@@ -141,10 +141,11 @@ static int phy_hw_reset(void)
 		gpio_free(gpio);
 		gpio_request(gpio, "phy_reset");
 		gpio_direction_output(gpio, 1);
-		mdelay(20);
+		mdelay(100);
 		gpio_set_value(gpio, 0);
-		mdelay(50);
+		mdelay(100);
 		gpio_set_value(gpio, 1);
+		mdelay(100);
 	}
 
 	return 0;

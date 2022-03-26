@@ -37,7 +37,7 @@
 };
 
 &eth0 {
-	status = "okay";
+	status = "disabled";
 	phy-mode = "sgmii";
 	phy = <&ethphy0>;
 	pinctrl-names = "default";
