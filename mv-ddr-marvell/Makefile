@@ -256,7 +256,7 @@ MV_DDR_DRVPATH = $(MV_DDR_ROOT)/drivers
 INCPATH = $(MV_DDR_ROOT) $(MV_DDR_SRCPATH) $(MV_DDR_DRVPATH)
 INCLUDE = $(addprefix -I,$(INCPATH))
 
-CFLAGS = $(INCLUDE) -Wall -Werror
+CFLAGS = $(INCLUDE) -Wall
 
 ifneq ($(findstring DDR3,$(DDR_TYPE)),)
 CFLAGS += -DCONFIG_DDR3
@@ -332,7 +332,7 @@ ECHO     = @echo
 OBJ_DIR ?= $(MV_DDR_ROOT)
 
 CFLAGS = -DMV_DDR_ATF -DCONFIG_DDR4
-CFLAGS += -Wall -Werror -Os -ffreestanding -mlittle-endian -g -gdwarf-2 -nostdinc
+CFLAGS += -Wall -Os -ffreestanding -mlittle-endian -g -gdwarf-2 -nostdinc
 CFLAGS += -march=armv8-a -fpie
 
 # PLATFORM is set in ble/ble.mk

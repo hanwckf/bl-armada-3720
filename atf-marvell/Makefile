@@ -158,7 +158,7 @@ ASFLAGS_aarch32		=	$(march32-directive)
 ASFLAGS_aarch64		=	-march=armv8-a
 
 CPPFLAGS		=	${DEFINES} ${INCLUDES} -nostdinc		\
-				-Wmissing-include-dirs -Werror
+				-Wmissing-include-dirs
 ASFLAGS			+=	$(CPPFLAGS) $(ASFLAGS_$(ARCH))			\
 				-D__ASSEMBLY__ -ffreestanding 			\
 				-Wa,--fatal-warnings
@@ -173,7 +173,7 @@ ifneq ($(PIE_FOUND),)
 TF_CFLAGS		+=	-fno-PIE
 endif
 
-TF_LDFLAGS		+=	--fatal-warnings -O1
+TF_LDFLAGS		+=	-O1
 TF_LDFLAGS		+=	--gc-sections
 TF_LDFLAGS		+=	$(TF_LDFLAGS_$(ARCH))
 

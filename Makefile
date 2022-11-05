@@ -11,7 +11,7 @@ DDR := $(PWD)/mv-ddr-marvell
 A3700_TOOLS := $(PWD)/A3700-utils-marvell
 BL33 := $(PWD)/u-boot-marvell/u-boot.bin
 
-MAKE_ARCH := make CROSS_COMPILE=aarch64-linux-gnu- CROSS_CM3=arm-linux-gnueabi-
+MAKE_ARCH := make CROSS_COMPILE=aarch64-linux-gnu- CROSS_CM3=arm-none-linux-gnueabihf-
 
 all: uboot atf
 
